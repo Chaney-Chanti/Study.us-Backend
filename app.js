@@ -9,14 +9,20 @@ const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology:
 app.use(cors());
 
 //Connect to DB
-async function main(){
-
+async function main() {
     try {
         await client.connect();
         await listDatabases(client);
+
         //Import Routes
         const studentRoute = require('./routes/student');
+        const assignmentRoute = require('./routes/assignment');
+        const classRoute = require('./routes/class');
+
         app.use('/student', studentRoute(client));
+        app.use('/assignment', assignmentRoute(client));
+        app.use('/class', classRoute(client));
+
     } catch (e) {
         console.error(e);
     }
@@ -24,7 +30,7 @@ async function main(){
 //Call main and check for errors
 main().catch(console.error);
 
-async function listDatabases(client){
+async function listDatabases(client) {
     databasesList = await client.db().admin().listDatabases();
     console.log("Databases:");
     databasesList.databases.forEach(db => console.log(` - ${db.name}`));

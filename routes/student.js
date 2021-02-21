@@ -1,15 +1,24 @@
 const express = require('express');
 const router = express.Router();
+const { ObjectID } = require('mongodb');
 
-module.exports = function(client){
+module.exports = function (client){
+    // References to database and collections
+    const database = client.db("Student_Stats");
+    const Students = database.collection("Students");
 
-    async function findOneStudentByName(client, studentName){
-        const result = await client.db("Student_Stats").collection("Students").findOne({name:studentName});
-        if(result){
-            console.log(`Here's the students information '${studentName}'`);
+    async function getAllStudents() {
+        const result = await Students.find().toArray();
+        return result;
+    }
+
+    async function findOneStudentByName(client, studentId){
+        const result = await Students.findOne({_id: ObjectID(studentId)});
+        if (result){
+            console.log(`Here's the students information '${studentId}'`);
             console.log(result);
         } else {
-            console.log(`No students found with the name '${studentName}'`);
+            console.log(`No students found with the id '${studentId}'`);
         }
         return result;
     }
@@ -31,9 +40,9 @@ module.exports = function(client){
         }
         return result;
     }
-    async function findOneStatsByName(client, studentName){
+    async function findOneStatsByName(client, id){
         var list = [];
-        const result = await client.db("Student_Stats").collection("Students").findOne({name:studentName});
+        const result = await client.db("Student_Stats").collection("Students").findOne({_id:ObjectID(id)});
         if(result){
             console.log(result.assignments);
             for (const assignmentId of result.assignments) {
@@ -45,32 +54,58 @@ module.exports = function(client){
             list.sort((a1, a2) => {
                 return a1.grade - a2.grade;
             });
-            list = list.slice(0, 3);
             console.log(list);
-                // result.assignment.sort();
-            // console.log(`${studentName}' lowest grade is assignment: `);
-            // console.log(result.assignment[0]);
         } else {
-            console.log(`No students found with the name '${studentName}'`);
+            console.log(`No students found with the name '${id}'`);
         }
         return list;
     }
 
+    async function getStatsOfStudentForClass(id, classId){
+        var list = [];
+        const result = await Students.findOne({_id:ObjectID(id)});
+        if(result){
+            for (const assignmentId of result.assignments) {
+                const assignment = await client.db("Student_Stats").collection("Assignments").findOne({_id: assignmentId});
+                if (assignment.is_test === false && assignment.class === classId){
+                    list.push(assignment);
+                    console.log(assignment)
+                }
+            }
+            list.sort((a1, a2) => {
+                return a1.grade - a2.grade;
+            });
+            console.log(list);
+        } else {
+            console.log(`No students found with the name '${id}'`);
+        }
+        return list;
+    }
     //------------------------------------------------------------------------------------
 
+    router.get('/', async (_req, res) => {
+        const result = await getAllStudents();
+        res.send(result);
+    });
     //Get information about one student
-    router.get('/:name', async (req,res) => {
-        const result = await findOneStudentByName(client, req.params.name);
+    router.get('/:id', async (req,res) => {
+        console.log(req.params.id);
+        const result = await findOneStudentByName(client, req.params.id);
         res.send(result);
     });
     //Get the overall grade for one student 
-    router.get('/:name/grade', async (req,res) => {
-        const result = await findOneGradeByName(client, req.params.name);
+    router.get('/:id/grade', async (req,res) => {
+        const result = await findOneGradeByName(client, req.params.id);
         res.send(result);
     });
     //display the graphs or stats of a student
-    router.get('/:name/stats', async (req,res) => {
-        const result = await findOneStatsByName(client, req.params.name);
+    router.get('/:id/stats', async (req,res) => {
+        const result = await findOneStatsByName(client, req.params.id);
+        res.send(result);
+    });
+    // display stats for a specific class
+    router.get('/:id/stats/:classId', async (req,res) => {
+        const result = await getStatsOfStudentForClass(req.params.id, req.params.classId);
         res.send(result);
     });
     return router;
