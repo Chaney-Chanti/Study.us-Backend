@@ -1,11 +1,12 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
 require('dotenv').config();
 const {MongoClient} = require('mongodb');
 const url = process.env.DB_CONNECTION;
 const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
 
-
+app.use(cors());
 
 //Connect to DB
 async function main(){
@@ -36,4 +37,4 @@ async function listDatabases(client){
 // }
 
 //How do we start listening to the server
-app.listen(3000);
+app.listen(process.env.PORT || 3000);
